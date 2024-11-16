@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Layout with Character and Shop Panels</title>
+    <style>
+        /* Basic Styling */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            position: relative;
+            background-color: #f4f4f4;
+        }
+        /* Coins Display */
+        .coins-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        /* Daily Rewards Button */
+        .daily-rewards-btn {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            padding: 10px 20px;
+            font-size: 1em;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        /* Side Buttons */
+        .side-btn {
+            position: absolute;
+            left: 20px;
+            padding: 10px 20px;
+            font-size: 1em;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            text-align: left;
+        }
+        .characters-btn { top: 100px; }
+        .shop-btn { top: 160px; }
+        .side-btn:hover { background-color: #555; }
+        /* Panel Styling */
+        .panel {
+            display: none;
+            position: absolute;
+            top: 50px;
+            left: 150px; /* Move panels slightly to the right */
+            width: 55%;
+            height: 80%;
+            background-color: white;
+            border: 2px solid black;
+            border-radius: 10px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .panel h2 { text-align: center; }
+        .character { padding: 10px; font-size: 1.1em; display: flex; justify-content: space-between; align-items: center; }
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #FF4C4C;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+        /* Get Character Button */
+        .get-character-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            font-size: 1em;
+            background-color: #FFA500;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .sell-btn {
+            background-color: #FF8C00;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 5px 10px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Coins Display -->
+    <div class="coins-container" id="coins">
+        Coins: <span id="coin-count">0</span>
+    </div>
+
+    <!-- Daily Rewards Button -->
+    <button class="daily-rewards-btn" id="daily-rewards-btn">Daily Rewards</button>
+
+    <!-- Side Buttons for Characters and Shop -->
+    <button class="side-btn characters-btn" id="characters-btn">Characters</button>
+    <button class="side-btn shop-btn" id="shop-btn">Shop</button>
+
+    <!-- Character Panel -->
+    <div class="panel" id="character-panel">
+        <button class="close-btn" onclick="closePanel('character-panel')">Close</button>
+        <h2>Your Characters</h2>
+        <div id="character-content"></div>
+    </div>
+
+    <!-- Shop Panel -->
+    <div class="panel" id="shop-panel">
+        <button class="close-btn" onclick="closePanel('shop-panel')">Close</button>
+        <h2>Shop</h2>
+        <button class="get-character-btn" onclick="getCharacter()">Get Character (20 Coins)</button>
+    </div>
+
+    <script>
+        // Initialize coins count
+        let coins = parseInt(localStorage.getItem('coins')) || 0;
+        document.getElementById('coin-count').textContent = coins;
+
+        // Character inventory as an array to support different types and rarities
+        let characterInventory = JSON.parse(localStorage.getItem('characterInventory')) || [];
+
+        // Possible types
+        const types = ["Earth", "Fire", "Water", "Air"];
+
+        // Display character inventory with Sell button
+        function displayCharacters() {
+            const characterContent = document.getElementById('character-content');
+            characterContent.innerHTML = ''; // Clear previous content
+
+            characterInventory.forEach((character, index) => {
+                const characterDiv = document.createElement('div');
+                characterDiv.className = 'character';
+                characterDiv.textContent = `${character.rarity} ${character.type}: ${character.count}`;
+
+                const sellBtn = document.createElement('button');
+                sellBtn.className = 'sell-btn';
+                sellBtn.textContent = `Sell (${getSellPrice(character.rarity)} Coins)`;
+                sellBtn.onclick = () => sellCharacter(index);
+
+                characterDiv.appendChild(sellBtn);
+                characterContent.appendChild(characterDiv);
+            });
+        }
+
+        // Daily rewards functionality
+        document.getElementById('daily-rewards-btn').addEventListener('click', function() {
+            const today = new Date().toDateString();
+            const lastClaimDate = localStorage.getItem('lastClaimDate');
+
+            if (lastClaimDate === today) {
+                alert("You have already claimed your daily reward today!");
+                return;
+            }
+
+            coins += Math.floor(Math.random() * 500) + 1; // Add random coins
+            localStorage.setItem('coins', coins);
+            document.getElementById('coin-count').textContent = coins;
+            localStorage.setItem('lastClaimDate', today);
+        });
+
+        // Get Character Functionality
+        function getCharacter() {
+            if (coins < 20) {
+                alert("Not enough coins!");
+                return;
+            }
+
+            coins -= 20;
+            localStorage.setItem('coins', coins);
+            document.getElementById('coin-count').textContent = coins;
+
+            // Random rarity and type assignment
+            const rarity = getRandomRarity();
+            const type = types[Math.floor(Math.random() * types.length)];
+
+            // Check if character already exists in inventory
+            const existingCharacter = characterInventory.find(
+                char => char.rarity === rarity && char.type === type
+            );
+
+            if (existingCharacter) {
+                existingCharacter.count++;
+            } else {
+                characterInventory.push({ rarity, type, count: 1 });
+            }
+
+            localStorage.setItem('characterInventory', JSON.stringify(characterInventory));
+            displayCharacters();
+            alert(`You received a ${rarity} ${type} character!`);
+        }
+
+        // Get random rarity based on probabilities
+        function getRandomRarity() {
+            const rand = Math.random();
+            if (rand < 0.005) return "Golden";
+            else if (rand < 0.015) return "Legendary";
+            else if (rand < 0.115) return "Epic";
+            else if (rand < 0.315) return "Rare";
+            else if (rand < 0.665) return "Uncommon";
+            else return "Common";
+        }
+
+        // Sell Character Functionality
+        function sellCharacter(index) {
+            const character = characterInventory[index];
+            const sellPrice = getSellPrice(character.rarity);
+
+            coins += sellPrice;
+            character.count--;
+
+            if (character.count === 0) {
+                characterInventory.splice(index, 1);
+            }
+
+            localStorage.setItem('coins', coins);
+            document.getElementById('coin-count').textContent = coins;
+            localStorage.setItem('characterInventory', JSON.stringify(characterInventory));
+            displayCharacters();
+        }
+
+        // Get sell price based on rarity
+        function getSellPrice(rarity) {
+            switch (rarity) {
+                case "Common": return 1;
+                case "Uncommon": return 5;
+                case "Rare": return 25;
+                case "Epic": return 75;
+                case "Legendary": return Math.floor(Math.random() * 201) + 200;
+                case "Golden": return Math.floor(Math.random() * 2001) + 1000;
+                default: return 0;
+            }
+        }
+
+        // Panel display functions
+        document.getElementById('characters-btn').addEventListener('click', function() {
+            document.getElementById('character-panel').style.display = 'block';
+            displayCharacters();
+        });
+
+        document.getElementById('shop-btn').addEventListener('click', function() {
+            document.getElementById('shop-panel').style.display = 'block';
+        });
+
+        function closePanel(panelId) {
+            document.getElementById(panelId).style.display = 'none';
+        }
+    </script>
+</body>
+</html>
